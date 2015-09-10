@@ -12,12 +12,19 @@ def getDb():
 def putSnippet(name, snippet):
     """Store a snippet with an associated name"""
     conn = getDb()
-    cursor = conn.cursor()
     sql = "insert into snippets values(%s, %s)"
     logging.debug("executing sql: {}".format(sql))
-    cursor.execute(sql, (name, snippet))
-    conn.commit()
-    logging.debug("successfully stored snippet")
+
+    with getDb() as conn:
+        with conn.cursor() as cursor:
+            try:
+                cursor.execute(sql, (name, snippet))
+                print "added snippet '{}' ok".format(name)
+            except psycopg2.IntegrityError as ex:
+                conn.rollback()
+                sql = "update snippets set message=%s where name=%s"
+                cursor.execute(sql, (snippet, name))
+
 
 def getSnippet(name):
     """Get a snippet with a given name"""
